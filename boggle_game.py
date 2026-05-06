@@ -1,9 +1,13 @@
 import tkinter as tk
-from tkinter import font, messagebox
+from tkinter import font, messagebox, ttk
 import random
 import unicodedata
 import os
 import sys
+import json
+
+import boggle_history
+import boggle_visualizer
 
 def remove_accents(input_str):
     nksfd = unicodedata.normalize('NFKD', input_str)
@@ -46,6 +50,7 @@ class BoggleApp:
         self.load_geometry()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.load_dictionary()
+        boggle_history.init_db()
         self.setup_ui()
         self.setup_bindings()
         self.generate_new_game()
@@ -309,6 +314,41 @@ class BoggleApp:
             self.missed_words = sorted([w for w in self.all_valid_words if w not in self.found_words], key=lambda x: (-len(x), x))
             self.missed_words_computed = True; self.update_stats_table()
         self.refresh_words_display(); self.score_label.config(text=f"Score final : {self.final_base_score}")
+        self.process_stats()
+
+    def process_stats(self):
+        # Prepare data for history
+        total_possible_score = sum(self.get_word_score(w) for w in self.all_valid_words)
+        
+        found_valid = [w for w in self.found_words if (w in self.dictionary) and self.is_word_in_grid(w)]
+        found_lens = {}
+        for w in found_valid:
+            l = str(len(w))
+            found_lens[l] = found_lens.get(l, 0) + 1
+            
+        poss_lens = {}
+        for w in self.all_valid_words:
+            l = str(len(w))
+            poss_lens[l] = poss_lens.get(l, 0) + 1
+            
+        longest_found = max([len(w) for w in found_valid]) if found_valid else 0
+        longest_poss = max([len(w) for w in self.all_valid_words]) if self.all_valid_words else 0
+        
+        data = {
+            'score': self.final_base_score,
+            'max_score': total_possible_score,
+            'words_count': len(found_valid),
+            'max_words_count': len(self.all_valid_words),
+            'longest_word_found_len': longest_found,
+            'longest_word_possible_len': longest_poss,
+            'found_lengths': found_lens,
+            'possible_lengths': poss_lens,
+            'grid_string': "".join("".join(row) for row in self.current_grid),
+            'found_words': found_valid
+        }
+        
+        game_id = boggle_history.save_game(data)
+        boggle_visualizer.show_stats(self.root, game_id)
 
     def on_reset_request(self):
         if hasattr(self, 'confirm_win') and self.confirm_win.winfo_exists(): self.confirm_win.focus_force(); return
