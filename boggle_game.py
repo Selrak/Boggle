@@ -27,11 +27,11 @@ class BoggleApp:
         self.root.configure(bg="white")
         self.debug_mode = debug
         
-        self.main_font = font.Font(family="Segoe UI", size=10)
-        self.bold_font = font.Font(family="Segoe UI", size=10, weight="bold")
-        self.timer_font = font.Font(family="Segoe UI", size=24, weight="bold")
-        self.letter_font = font.Font(family="Segoe UI", size=36, weight="bold")
-        self.score_font = font.Font(family="Segoe UI", size=16, weight="bold")
+        self.main_font = font.Font(family="Arial", size=13)
+        self.bold_font = font.Font(family="Arial", size=13, weight="bold")
+        self.entry_font = font.Font(family="Arial", size=22)
+        self.timer_font = font.Font(family="Arial", size=24, weight="bold")
+        self.letter_font = font.Font(family="Arial", size=36, weight="bold")
         
         self.game_in_progress = False
         self.time_left = 180
@@ -107,49 +107,49 @@ class BoggleApp:
             for c in range(4):
                 canvas = tk.Canvas(self.grid_frame, width=80, height=80, bg="white", highlightthickness=0)
                 canvas.grid(row=r, column=c, padx=5, pady=5)
-                self.draw_rounded_rect(canvas, 2, 2, 78, 78, 15, fill="white", outline="#333", width=2)
-                tid = canvas.create_text(40, 40, text="", font=self.letter_font, fill="#222")
+                self.draw_rounded_rect(canvas, 2, 2, 78, 78, 15, fill="white", outline="black", width=3)
+                tid = canvas.create_text(40, 40, text="", font=self.letter_font, fill="black")
                 row_canvases.append((canvas, tid))
             self.cell_canvases.append(row_canvases)
             
         self.input_line = tk.Frame(self.main_frame, bg="white")
         self.input_line.pack(pady=10, fill="x")
         self.entry_var = tk.StringVar()
-        self.entry = tk.Entry(self.input_line, textvariable=self.entry_var, font=self.main_font, justify="center", relief="flat", highlightthickness=2, highlightbackground="#eee", highlightcolor="#0078d7")
+        self.entry = tk.Entry(self.input_line, textvariable=self.entry_var, font=self.entry_font, justify="center", relief="flat", highlightthickness=2, highlightbackground="#ddd", highlightcolor="#999")
         self.entry.pack(side="left", expand=True, fill="x", ipady=8)
-        self.time_label = tk.Label(self.input_line, text="3:00", font=self.timer_font, bg="white", width=5, fg="#d32f2f")
+        self.time_label = tk.Label(self.input_line, text="3:00", font=self.timer_font, bg="white", width=5, fg="black")
         self.time_label.pack(side="right", padx=10)
         
-        self.words_label = tk.Label(self.main_frame, text="Mots trouvés", font=self.bold_font, bg="white", fg="#555")
+        self.words_label = tk.Label(self.main_frame, text="Mots trouvés", font=self.bold_font, bg="white")
         self.words_label.pack(anchor="w")
         self.words_container = tk.Frame(self.main_frame, bg="white", highlightthickness=1, highlightbackground="#eee")
         self.words_container.pack(pady=5, fill="both", expand=True)
         self.words_scroll = tk.Scrollbar(self.words_container)
         self.words_scroll.pack(side="right", fill="y")
-        self.words_display = tk.Text(self.words_container, height=6, font=self.main_font, relief="flat", bg="white", yscrollcommand=self.words_scroll.set, spacing1=4, cursor="arrow", wrap="none")
+        self.words_display = tk.Text(self.words_container, height=6, font=self.main_font, relief="flat", bg="white", yscrollcommand=self.words_scroll.set, spacing1=2, cursor="arrow", wrap="none")
         self.words_display.pack(side="left", fill="both", expand=True)
         self.words_scroll.config(command=self.words_display.yview)
         
-        self.words_display.tag_config("valid", foreground="#2e7d32")
-        self.words_display.tag_config("not_on_grid", foreground="#c62828")
-        self.words_display.tag_config("not_in_dict", foreground="#7b1fa2")
-        self.words_display.tag_config("missed", foreground="#1565c0")
+        self.words_display.tag_config("valid", foreground="green")
+        self.words_display.tag_config("not_on_grid", foreground="red")
+        self.words_display.tag_config("not_in_dict", foreground="#9C27B0")
+        self.words_display.tag_config("missed", foreground="blue")
         
         self.bottom_frame = tk.Frame(self.main_frame, bg="white")
         self.bottom_frame.pack(fill="x", pady=5)
-        self.stats_display = tk.Text(self.bottom_frame, height=4, font=("Segoe UI", 9), bg="#fafafa", relief="flat", highlightthickness=1, highlightbackground="#eee", padx=10, pady=5)
+        self.stats_display = tk.Text(self.bottom_frame, height=4, font=("Arial", 11), bg="white", relief="flat", highlightthickness=0)
         self.stats_display.pack(fill="x", pady=5)
-        self.stats_display.tag_config("header", font=("Segoe UI", 9, "bold"))
+        self.stats_display.tag_config("header", font=("Arial", 11, "bold"))
         self.stat_colors = {3: "#E3F2FD", 4: "#E8F5E9", 5: "#FFFDE7", 6: "#FCE4EC", 7: "#F3E5F5", 8: "#F5F5F5"}
         for l, color in self.stat_colors.items(): self.stats_display.tag_config(f"cat_{l}", background=color)
 
         self.score_line = tk.Frame(self.bottom_frame, bg="white")
         self.score_line.pack(fill="x")
-        self.score_label = tk.Label(self.score_line, text="", font=self.score_font, bg="white", fg="#333")
+        self.score_label = tk.Label(self.score_line, text="", font=("Arial", 14, "bold"), bg="white")
         self.score_label.pack(side="left")
-        self.extra_score_label = tk.Label(self.score_line, text="", font=self.main_font, bg="white", fg="#1565c0")
+        self.extra_score_label = tk.Label(self.score_line, text="", font=self.main_font, bg="white", fg="blue")
         self.extra_score_label.pack(side="left", padx=20)
-        self.reset_button = tk.Button(self.bottom_frame, text="Nouveau Jeu (Ctrl+R)", command=self.on_reset_request, font=self.main_font, bg="#f5f5f5", relief="flat", padx=15, pady=8, highlightthickness=1, highlightbackground="#ccc", activebackground="#e0e0e0")
+        self.reset_button = tk.Button(self.bottom_frame, text="Nouveau Jeu (Ctrl+R)", command=self.on_reset_request, font=self.main_font, bg="#f8f8f8", relief="flat", padx=15, pady=5, highlightthickness=1, highlightbackground="#ccc")
         self.reset_button.pack(side="right")
         
         # TAB 2: PROGRESSION
@@ -243,20 +243,33 @@ class BoggleApp:
 
     def update_stats_table(self):
         self.stats_display.config(state="normal"); self.stats_display.delete("1.0", tk.END)
-        self.stats_display.config(tabs=[80, 160, 240, 320, 400])
+        # Use fixed larger tabs for Arial 11
+        self.stats_display.config(tabs=[140, 280, 420, 560])
         found_all = set(self.found_words) | set(self.extra_words)
+        
         s_len = {}
         for w in self.all_valid_words:
-            l = min(len(w), 8); s_len[l] = s_len.get(l, [0, 0]); s_len[l][0] += 1
-            if w not in found_all: s_len[l][1] += 1
-        total_p = sum(self.get_word_score(w) for w in self.all_valid_words)
-        self.stats_display.insert(tk.END, f"TOTAL POSSIBLE : {len(self.all_valid_words)} mots, {total_p} pts\n", "header")
-        sorted_lens = sorted(s_len.keys()); half = (len(sorted_lens) + 1) // 2
+            l = min(len(w), 8)
+            if l not in s_len: s_len[l] = [0, 0]
+            s_len[l][0] += 1
+            if w in found_all: s_len[l][1] += 1
+            
+        total_p_score = sum(self.get_word_score(w) for w in self.all_valid_words)
+        total_p_words = len(self.all_valid_words)
+        
+        self.stats_display.insert(tk.END, f"POTENTIEL GRILLE : {total_p_words} mots, {total_p_score} pts\n", "header")
+        
+        sorted_lens = sorted(s_len.keys())
+        half = (len(sorted_lens) + 1) // 2
         for i in range(half):
             for j in [i, i+half]:
                 if j < len(sorted_lens):
-                    l = sorted_lens[j]; t, r = s_len[l]; l_s = f"{l}L" if l < 8 else "8L+"
-                    self.stats_display.insert(tk.END, f" {l_s}\tTot:{t}\tRest:{r}\t", f"cat_{l}")
+                    l = sorted_lens[j]
+                    total, found = s_len[l]
+                    pct = round((found / total * 100)) if total > 0 else 0
+                    l_s = f"{l}L" if l < 8 else "8L+"
+                    display_text = f" {l_s} : {found}/{total} ({pct}%)"
+                    self.stats_display.insert(tk.END, f"{display_text}\t", f"cat_{l}")
             self.stats_display.insert(tk.END, "\n")
         self.stats_display.config(state="disabled")
 
@@ -363,7 +376,10 @@ class BoggleApp:
         }
         
         game_id = boggle_history.save_game(data)
-        boggle_visualizer.show_stats(self.root, game_id)
+        
+        # Update Stats Tab
+        for widget in self.stats_tab.winfo_children(): widget.destroy()
+        self.stats_view = boggle_visualizer.show_stats(self.stats_tab, game_id, is_embedded=True)
 
     def on_reset_request(self):
         if hasattr(self, 'confirm_win') and self.confirm_win.winfo_exists(): self.confirm_win.focus_force(); return
