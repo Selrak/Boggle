@@ -1,0 +1,109 @@
+Créer un jeu de boggle simple et efficace en français, facile à lancer, avec une interface simple et claire et facile à modifier plus tard. Règles :
+
+Pas de titre de fenêtre ni quoi, juste le plateau de jeu, le temps, les mots déjà trouvés, les boutons nécessaires).
+Taille de grille 4*4 
+Fréquence d’apparition des lettres : suivant statistiquement le français (comme dans le jeu d’origine) (ou mieux retrouver les dés d’origine du jeu et les  reprendre)
+Les lettres sont tournées au hasard (vers le haut le bas la droite ou la gauche
+Les lettres ne s’illuminent pas au fur et à mesure qu’on tape
+Pendant le jeu le champs de texte où on rentre les mots a toujours le focus
+Les lettres sont toujours en majuscule et sans accents (si par habitude le joueur tape un accent c’est la lettre majuscule sans accent qui est affichée)
+Un mot est validé par “entrée”
+C’est seulement à la fin que tout est vérifié (score compris). Par défaut.
+Cependant les mots entrés s’affichent tels quels sous le plateau de jeu.
+Il y a un raccourci pour générer un nouveau tirage et donc un nouveau jeu : raccourci Ctrl+R (et bouton à l’écran). Si un jeu est déjà en cours, le temps est mis en pause, une fenêtre de confirmation Oui/Non apparaît, appuyer à nouveau sur Ctrl+R choisit “Oui”, Echap choisit “Non”.
+Le temps est 3 minutes, affiché à l’écran en temps réel.
+Les lettres d’un mot doivent être en contact par haut bas droite gauche et diagonal. Une même lettre ne peut être utilisée plus d’une fois dans le même mot. “Retour arrière” fonctionne comme normal.
+Scores : Mot de 3 ou 4 lettres : 1 point
+Mot de 5 lettres : 2 points
+Mot de 6 lettres : 3 points
+Mot de 7 lettres : 5 points
+Mot de 8 lettres ou plus : 11 points
+
+Réaliser les choses dans cet ordre, me faire valider à chaque fois en me montrant l’état des choses
+
+Il y aura deux modes : jeu, debug, test. En mode jeu rien de spécial. EN mode debug tout est verbose avec des logs dans un fichier dédié et des spéficités (voir plus bas)
+
+A. Fenêtre d’application avec vue standard, sans logique ni rien de cliquable, juste un tirage imposé arbitraire
+B. Possibilité d’utiliser Ctrl+R pour lancer un nouveau jeu et donc faire un nouveau tirage.
+C. Possibilité de rentrer des mots (ici en mode debug on affichera le texte en vert si le mot est dans la grille et rouge sinon, et le fond du champ de texte en vert pastel si le mot est dans le dico, rouge pastel sinon). Les mots rentrés (valides ou non) doivent s’afficher en dessous (en mode jeu aussi bien sûr ! tout le temps en fait)
+D. Le temps doit maintenant décompter dès le début du jeu. À la fin le score s’affiche et les mots juste sont maintenant affichés en vert et les mots erronnés (pas sur la grille ou pas dans le dico) sont en rouge.
+E Générer un test que l’on exécutera. Imposer la grille 
+
+ERZN
+NSTA
+IIES
+IBRC
+
+Et simuler la tape des mots suivants (en passant vraiment par le chamsp de texte)
+
+
+BIT
+BEATS
+RIE
+NIES
+TIRE
+BITS
+ETRE
+RIES
+NIER
+TIRS
+BITE
+ETRES
+RIS
+CET
+TIRES
+BITES
+ATRE
+RITE
+INERTE
+TER
+BITER
+ATRES
+RITES
+INERTES
+SERIN
+RESTE
+REITRE
+BISE
+SIR
+SERINS
+RESTER
+REITRES
+BISES
+SIRE
+CRETIN
+BER
+SEC
+RENIE
+SITE
+CRETINS
+BERS
+CES
+RENIES
+SITES
+CRETINE
+BEA
+TES
+RENIER
+BITA
+CRETINES
+BEAS
+SET
+NIET
+BITAS
+BEAT
+RESTA
+NIE
+TIR
+
+
+On doit obtenir un score de 112.
+Puis tester les mots suivants (pas dans la grille)
+GENERIQUE
+FERME
+CRASSE
+Le score ne doit pas bouger.
+
+
+Poser toute question de clarification.
+

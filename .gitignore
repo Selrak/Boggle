@@ -1,0 +1,4 @@
+__pycache__/
+screenshots/
+boggle_config.txt
+*.pyc
