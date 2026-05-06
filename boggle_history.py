@@ -58,9 +58,9 @@ def get_history():
     return rows
 
 def get_richness_bin(max_score):
-    if max_score < 50: return "Poor"
-    if max_score < 150: return "Average"
-    return "Rich"
+    if max_score < 50: return "Aride"
+    if max_score < 150: return "Fertile"
+    return "Luxuriante"
 
 def get_rankings(game_id):
     conn = sqlite3.connect(DB_NAME)
@@ -73,32 +73,20 @@ def get_rankings(game_id):
     current_score, max_score = res
     
     # Overall rank
-    cursor.execute('SELECT COUNT(*) + 1 FROM games WHERE score > ?', (current_score,))
-    overall_rank = cursor.fetchone()[0]
+    cursor.execute('SELECT COUNT(*) FROM games WHERE score > ?', (current_score,))
+    rank_overall = cursor.fetchone()[0] + 1
     cursor.execute('SELECT COUNT(*) FROM games')
     total_games = cursor.fetchone()[0]
     
-    # Binned rank
-    richness = get_richness_bin(max_score)
-    if richness == "Poor":
-        cursor.execute('SELECT COUNT(*) + 1 FROM games WHERE score > ? AND max_score < 50', (current_score,))
-        cursor.execute('SELECT COUNT(*) FROM games WHERE max_score < 50') # wait, I need to fetch both
-    # Refactoring ranking query to be more robust
-    
-    # Overall
-    cursor.execute('SELECT COUNT(*) FROM games WHERE score > ?', (current_score,))
-    rank_overall = cursor.fetchone()[0] + 1
-    
     # By richness
-    if max_score < 50:
+    richness = get_richness_bin(max_score)
+    if richness == "Aride":
         cursor.execute('SELECT COUNT(*) FROM games WHERE score > ? AND max_score < 50', (current_score,))
-        rank_richness = cursor.fetchone()[0] + 1
-    elif max_score < 150:
+    elif richness == "Fertile":
         cursor.execute('SELECT COUNT(*) FROM games WHERE score > ? AND max_score >= 50 AND max_score < 150', (current_score,))
-        rank_richness = cursor.fetchone()[0] + 1
     else:
         cursor.execute('SELECT COUNT(*) FROM games WHERE score > ? AND max_score >= 150', (current_score,))
-        rank_richness = cursor.fetchone()[0] + 1
+    rank_richness = cursor.fetchone()[0] + 1
         
     conn.close()
     return {

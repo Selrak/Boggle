@@ -27,9 +27,11 @@ class BoggleApp:
         self.root.configure(bg="white")
         self.debug_mode = debug
         
-        self.main_font = font.Font(family="Arial", size=12)
-        self.timer_font = font.Font(family="Arial", size=20)
-        self.letter_font = font.Font(family="Arial", size=36, weight="bold")
+        self.main_font = font.Font(family="Segoe UI", size=10)
+        self.bold_font = font.Font(family="Segoe UI", size=10, weight="bold")
+        self.timer_font = font.Font(family="Segoe UI", size=24, weight="bold")
+        self.letter_font = font.Font(family="Segoe UI", size=36, weight="bold")
+        self.score_font = font.Font(family="Segoe UI", size=16, weight="bold")
         
         self.game_in_progress = False
         self.time_left = 180
@@ -87,7 +89,14 @@ class BoggleApp:
         return canvas.create_polygon(points, **kwargs, smooth=True)
 
     def setup_ui(self):
-        self.main_frame = tk.Frame(self.root, padx=20, pady=10, bg="white")
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(expand=True, fill="both")
+        
+        # TAB 1: JEU
+        self.game_tab = tk.Frame(self.notebook, bg="white")
+        self.notebook.add(self.game_tab, text="Plateau")
+        
+        self.main_frame = tk.Frame(self.game_tab, padx=20, pady=10, bg="white")
         self.main_frame.pack(expand=True, fill="both")
         
         self.grid_frame = tk.Frame(self.main_frame, bg="white")
@@ -98,50 +107,56 @@ class BoggleApp:
             for c in range(4):
                 canvas = tk.Canvas(self.grid_frame, width=80, height=80, bg="white", highlightthickness=0)
                 canvas.grid(row=r, column=c, padx=5, pady=5)
-                self.draw_rounded_rect(canvas, 2, 2, 78, 78, 15, fill="white", outline="black", width=3)
-                tid = canvas.create_text(40, 40, text="", font=self.letter_font, fill="black")
+                self.draw_rounded_rect(canvas, 2, 2, 78, 78, 15, fill="white", outline="#333", width=2)
+                tid = canvas.create_text(40, 40, text="", font=self.letter_font, fill="#222")
                 row_canvases.append((canvas, tid))
             self.cell_canvases.append(row_canvases)
             
         self.input_line = tk.Frame(self.main_frame, bg="white")
         self.input_line.pack(pady=10, fill="x")
         self.entry_var = tk.StringVar()
-        self.entry = tk.Entry(self.input_line, textvariable=self.entry_var, font=self.main_font, justify="center", relief="flat", highlightthickness=2, highlightbackground="#ddd", highlightcolor="#999")
-        self.entry.pack(side="left", expand=True, fill="x", ipady=5)
-        self.time_label = tk.Label(self.input_line, text="3:00", font=self.timer_font, bg="white", width=5)
+        self.entry = tk.Entry(self.input_line, textvariable=self.entry_var, font=self.main_font, justify="center", relief="flat", highlightthickness=2, highlightbackground="#eee", highlightcolor="#0078d7")
+        self.entry.pack(side="left", expand=True, fill="x", ipady=8)
+        self.time_label = tk.Label(self.input_line, text="3:00", font=self.timer_font, bg="white", width=5, fg="#d32f2f")
         self.time_label.pack(side="right", padx=10)
         
-        self.words_label = tk.Label(self.main_frame, text="Mots trouvés", font=self.main_font, bg="white")
+        self.words_label = tk.Label(self.main_frame, text="Mots trouvés", font=self.bold_font, bg="white", fg="#555")
         self.words_label.pack(anchor="w")
         self.words_container = tk.Frame(self.main_frame, bg="white", highlightthickness=1, highlightbackground="#eee")
         self.words_container.pack(pady=5, fill="both", expand=True)
         self.words_scroll = tk.Scrollbar(self.words_container)
         self.words_scroll.pack(side="right", fill="y")
-        self.words_display = tk.Text(self.words_container, height=6, font=self.main_font, relief="flat", bg="white", yscrollcommand=self.words_scroll.set, spacing1=2, cursor="arrow", wrap="none")
+        self.words_display = tk.Text(self.words_container, height=6, font=self.main_font, relief="flat", bg="white", yscrollcommand=self.words_scroll.set, spacing1=4, cursor="arrow", wrap="none")
         self.words_display.pack(side="left", fill="both", expand=True)
         self.words_scroll.config(command=self.words_display.yview)
         
-        self.words_display.tag_config("valid", foreground="green")
-        self.words_display.tag_config("not_on_grid", foreground="red")
-        self.words_display.tag_config("not_in_dict", foreground="#9C27B0")
-        self.words_display.tag_config("missed", foreground="blue")
+        self.words_display.tag_config("valid", foreground="#2e7d32")
+        self.words_display.tag_config("not_on_grid", foreground="#c62828")
+        self.words_display.tag_config("not_in_dict", foreground="#7b1fa2")
+        self.words_display.tag_config("missed", foreground="#1565c0")
         
         self.bottom_frame = tk.Frame(self.main_frame, bg="white")
         self.bottom_frame.pack(fill="x", pady=5)
-        self.stats_display = tk.Text(self.bottom_frame, height=4, font=("Arial", 10), bg="white", relief="flat", highlightthickness=0)
+        self.stats_display = tk.Text(self.bottom_frame, height=4, font=("Segoe UI", 9), bg="#fafafa", relief="flat", highlightthickness=1, highlightbackground="#eee", padx=10, pady=5)
         self.stats_display.pack(fill="x", pady=5)
-        self.stats_display.tag_config("header", font=("Arial", 10, "bold"))
+        self.stats_display.tag_config("header", font=("Segoe UI", 9, "bold"))
         self.stat_colors = {3: "#E3F2FD", 4: "#E8F5E9", 5: "#FFFDE7", 6: "#FCE4EC", 7: "#F3E5F5", 8: "#F5F5F5"}
         for l, color in self.stat_colors.items(): self.stats_display.tag_config(f"cat_{l}", background=color)
 
         self.score_line = tk.Frame(self.bottom_frame, bg="white")
         self.score_line.pack(fill="x")
-        self.score_label = tk.Label(self.score_line, text="", font=("Arial", 14, "bold"), bg="white")
+        self.score_label = tk.Label(self.score_line, text="", font=self.score_font, bg="white", fg="#333")
         self.score_label.pack(side="left")
-        self.extra_score_label = tk.Label(self.score_line, text="", font=self.main_font, bg="white", fg="blue")
+        self.extra_score_label = tk.Label(self.score_line, text="", font=self.main_font, bg="white", fg="#1565c0")
         self.extra_score_label.pack(side="left", padx=20)
-        self.reset_button = tk.Button(self.bottom_frame, text="Nouveau Jeu (Ctrl+R)", command=self.on_reset_request, font=self.main_font, bg="#f8f8f8", relief="flat", padx=15, pady=5, highlightthickness=1, highlightbackground="#ccc")
+        self.reset_button = tk.Button(self.bottom_frame, text="Nouveau Jeu (Ctrl+R)", command=self.on_reset_request, font=self.main_font, bg="#f5f5f5", relief="flat", padx=15, pady=8, highlightthickness=1, highlightbackground="#ccc", activebackground="#e0e0e0")
         self.reset_button.pack(side="right")
+        
+        # TAB 2: PROGRESSION
+        self.stats_tab = tk.Frame(self.notebook, bg="white")
+        self.notebook.add(self.stats_tab, text="Progression")
+        self.stats_view = None
+
         self.words_display.bind("<Configure>", lambda e: self.refresh_words_display())
 
     def animate_scroll_to_end(self, target=1.0):
