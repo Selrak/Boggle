@@ -25,11 +25,12 @@ class BoggleApp:
     ]
     TOTAL_GAME_TIME = 180
 
-    def __init__(self, root, debug=False):
+    def __init__(self, root, debug=False, force_update=False):
         self.root = root
         self.root.title("Boggle")
         self.root.configure(bg="white")
         self.debug_mode = debug
+        self.force_update = force_update
         
         self.main_font = font.Font(family="Arial", size=13)
         self.bold_font = font.Font(family="Arial", size=13, weight="bold")
@@ -71,9 +72,42 @@ class BoggleApp:
         self.root.after(1000, self.check_for_updates)
         
     def check_for_updates(self):
+        config_path = "boggle_config.json"
+        now = time.time()
+        should_check = self.force_update
+        
+        if not should_check:
+            try:
+                if os.path.exists(config_path):
+                    with open(config_path, "r") as f:
+                        config = json.load(f)
+                        last_check = config.get("last_update_check", 0)
+                        # Check if 24 hours (86400 seconds) have passed
+                        if now - last_check > 86400:
+                            should_check = True
+                else:
+                    should_check = True
+            except:
+                should_check = True
+
+        if not should_check:
+            if self.debug_mode: print("[DEBUG] Skipping update check (checked recently).")
+            self.update_status_label.pack_forget()
+            return
+
         self.update_status_label.config(text="Recherche de mises à jour...")
         self.root.update_idletasks()
         if self.debug_mode: print("[DEBUG] Checking for updates...")
+        
+        # Save the time of this check
+        try:
+            config = {}
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f: config = json.load(f)
+            config["last_update_check"] = now
+            with open(config_path, "w") as f: json.dump(config, f)
+        except: pass
+
         try:
             # Fetch remote without affecting local branch
             subprocess.run(["git", "fetch"], capture_output=True, check=True, timeout=5)
@@ -88,7 +122,7 @@ class BoggleApp:
                 self.show_update_dialog()
             else:
                 if self.debug_mode: print("[DEBUG] Game is up to date.")
-                self.update_status_label.pack_forget() # Hide if up to date
+                self.update_status_label.pack_forget()
         except Exception as e:
             if self.debug_mode: print(f"[DEBUG] Update check failed: {e}")
             self.update_status_label.pack_forget()
@@ -575,12 +609,16 @@ class BoggleApp:
 
 if __name__ == "__main__":
     is_debug = "--debug" in sys.argv
+    force_update = "--force-update" in sys.argv
+    
     if is_debug:
         print("[DEBUG] Running in debug mode")
+    if force_update:
+        print("[DEBUG] Force-update flag detected")
     
     boggle_history.set_db_name(debug=is_debug)
     boggle_history.init_db()
 
     root = tk.Tk()
-    app = BoggleApp(root, debug=is_debug)
+    app = BoggleApp(root, debug=is_debug, force_update=force_update)
     root.mainloop()
