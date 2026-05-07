@@ -30,6 +30,7 @@ The system analyzes performance relative to the "Grid Potential" (all possible w
     - **Local SQLite:** Serves as a high-speed cache for instant UI response and offline play.
     - **GitHub Gist:** Acts as the single source of truth (master archive).
     - **Mechanism:** On startup, the app pulls missing games from a Secret Gist (identified by unique GUIDs). At the end of every game, it pushes the updated history back to the cloud. This allows seamless sequential play across multiple machines.
+    - **Isolation:** When running in `--debug` mode, the app syncs with `boggle_history_debug.json` instead of the production file, ensuring test data never pollutes your main history.
 - **Startup Flags:**
     - `--debug`: Redirects data to `boggle_stats_debug.db` and enables verbose logging.
     - `--force-update`: Bypasses the 24-hour limit to force an immediate update check.

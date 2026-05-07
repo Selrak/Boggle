@@ -25,13 +25,15 @@ def pull_from_gist(debug=False):
     pat = config["pat"]
     url = f"https://api.github.com/gists/{gist_id}"
     headers = {"Authorization": f"token {pat}"}
+    
+    filename = "boggle_history_debug.json" if debug else "boggle_history.json"
 
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             gist_data = response.json()
             files = gist_data.get("files", {})
-            sync_file = files.get("boggle_history.json")
+            sync_file = files.get(filename)
             
             if sync_file:
                 content = sync_file.get("content")
@@ -39,7 +41,7 @@ def pull_from_gist(debug=False):
                     cloud_data = json.loads(content)
                     cloud_games = cloud_data.get("games", [])
                     
-                    if debug: print(f"[DEBUG] Gist Sync: Fetched {len(cloud_games)} games from cloud.")
+                    if debug: print(f"[DEBUG] Gist Sync: Fetched {len(cloud_games)} games from cloud ({filename}).")
                     
                     # Merge into local DB
                     count = 0
@@ -63,6 +65,8 @@ def push_to_gist(debug=False):
     pat = config["pat"]
     url = f"https://api.github.com/gists/{gist_id}"
     headers = {"Authorization": f"token {pat}"}
+    
+    filename = "boggle_history_debug.json" if debug else "boggle_history.json"
 
     try:
         # Fetch all local games
@@ -71,7 +75,7 @@ def push_to_gist(debug=False):
         # Prepare Gist content
         payload = {
             "files": {
-                "boggle_history.json": {
+                filename: {
                     "content": json.dumps({"games": local_games}, indent=2)
                 }
             }
@@ -79,7 +83,7 @@ def push_to_gist(debug=False):
         
         response = requests.patch(url, headers=headers, json=payload, timeout=10)
         if response.status_code == 200:
-            if debug: print(f"[DEBUG] Gist Sync: Local history pushed to cloud successfully.")
+            if debug: print(f"[DEBUG] Gist Sync: Local history pushed to cloud successfully ({filename}).")
         else:
             if debug: print(f"[DEBUG] Gist Sync: Push failed with status {response.status_code}")
     except Exception as e:
