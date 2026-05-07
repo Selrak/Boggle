@@ -21,6 +21,7 @@ This project is a fully functional Boggle game implementation in Python (Tkinter
 - **Grid Richness:** Grids are binned into 'Poor', 'Average', and 'Rich' based on their maximum potential to allow for differentiated progress analysis.
 
 ## Development Guidelines
+- **Debug Mode:** Whenever running the game for testing or development purposes from the Gemini CLI, **ALWAYS** use the `--debug` flag (e.g., `python boggle_game.py --debug`). This redirects all gameplay data to `boggle_stats_debug.db` to keep the production history clean and enables verbose console logging.
 - **Testing:** Use `test_boggle.py` for logic verification. It uses a fixed grid to ensure deterministic results (Expected Score: 112).
 - **Styling:** Maintain the "White/Minimalist" aesthetic. Use `draw_rounded_rect` for custom canvas elements.
 - **Git Hooks:** Avoid re-introducing the tracker ID hook or any interactive hooks that might break automated environments.

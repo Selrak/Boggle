@@ -5,6 +5,12 @@ from datetime import datetime
 
 DB_NAME = "boggle_stats.db"
 
+def set_db_name(debug=False):
+    global DB_NAME
+    DB_NAME = "boggle_stats_debug.db" if debug else "boggle_stats.db"
+    if debug:
+        print(f"[DEBUG] Database set to: {DB_NAME}")
+
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -21,9 +27,22 @@ def init_db():
             found_lengths_json TEXT,
             possible_lengths_json TEXT,
             grid_string TEXT,
-            found_words_json TEXT
+            found_words_json TEXT,
+            has_paused INTEGER DEFAULT 0,
+            playing_time INTEGER DEFAULT 180,
+            is_finished INTEGER DEFAULT 1
         )
     ''')
+    # Migration
+    try:
+        cursor.execute('ALTER TABLE games ADD COLUMN has_paused INTEGER DEFAULT 0')
+    except sqlite3.OperationalError: pass
+    try:
+        cursor.execute('ALTER TABLE games ADD COLUMN playing_time INTEGER DEFAULT 180')
+    except sqlite3.OperationalError: pass
+    try:
+        cursor.execute('ALTER TABLE games ADD COLUMN is_finished INTEGER DEFAULT 1')
+    except sqlite3.OperationalError: pass
     conn.commit()
     conn.close()
 
@@ -35,24 +54,31 @@ def save_game(data):
             score, max_score, words_count, max_words_count,
             longest_word_found_len, longest_word_possible_len,
             found_lengths_json, possible_lengths_json,
-            grid_string, found_words_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            grid_string, found_words_json, has_paused,
+            playing_time, is_finished
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         data['score'], data['max_score'], data['words_count'], data['max_words_count'],
         data['longest_word_found_len'], data['longest_word_possible_len'],
         json.dumps(data['found_lengths']), json.dumps(data['possible_lengths']),
-        data['grid_string'], json.dumps(data['found_words'])
+        data['grid_string'], json.dumps(data['found_words']),
+        1 if data.get('has_paused') else 0,
+        data.get('playing_time', 180),
+        1 if data.get('is_finished') else 0
     ))
     game_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return game_id
 
-def get_history():
+def get_history(only_finished=True):
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM games ORDER BY id ASC')
+    if only_finished:
+        cursor.execute('SELECT * FROM games WHERE is_finished = 1 AND playing_time >= 180 ORDER BY id ASC')
+    else:
+        cursor.execute('SELECT * FROM games ORDER BY id ASC')
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows

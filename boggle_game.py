@@ -13,6 +13,8 @@ def remove_accents(input_str):
     nksfd = unicodedata.normalize('NFKD', input_str)
     return "".join([c for c in nksfd if not unicodedata.combining(c)])
 
+import time
+
 class BoggleApp:
     DICE = [
         "ETILAC", "AOTOTT", "AQSFRI", "AUTEDN",
@@ -20,6 +22,7 @@ class BoggleApp:
         "ELPISO", "EHINPS", "ENEWVT", "ESINLP",
         "MIDXER", "ADENVZ", "ACDEMP", "BILAFE"
     ]
+    TOTAL_GAME_TIME = 180
 
     def __init__(self, root, debug=False):
         self.root = root
@@ -34,7 +37,13 @@ class BoggleApp:
         self.letter_font = font.Font(family="Arial", size=36, weight="bold")
         
         self.game_in_progress = False
-        self.time_left = 180
+        self.is_paused = False
+        self.paused_due_to_focus = False
+        self.has_paused_this_game = False
+        self.time_left = self.TOTAL_GAME_TIME
+        self.start_time = None
+        self.total_pause_duration = 0
+        self.last_pause_start = None
         self.timer_id = None
         self.scroll_anim_id = None
         
@@ -67,11 +76,36 @@ class BoggleApp:
             except: pass
 
     def on_closing(self):
-        try:
-            with open("boggle_config.txt", "w", encoding="utf-8") as f:
-                f.write(self.root.geometry())
-        except: pass
-        self.root.destroy()
+        if self.game_in_progress:
+            was_already_paused = self.is_paused
+            
+            # Ensure the game is paused before showing the dialog
+            if not was_already_paused:
+                self.toggle_pause(force_state=True, due_to_focus=False) # Manual pause, not auto-resume focus
+            
+            confirm = messagebox.askyesno(
+                "Quitter", 
+                "Une partie est en cours. Voulez-vous vraiment quitter ?\n(La progression sera sauvegardée comme inachevée)",
+                default=messagebox.YES,
+                parent=self.root
+            )
+            
+            if confirm:
+                self.end_game(interrupted=True, silent=True)
+                self.root.destroy()
+            else:
+                # If it wasn't paused before, unpause now
+                if not was_already_paused:
+                    self.toggle_pause(force_state=False)
+                else:
+                    # Just ensure focus is restored to allow spacebar unpause
+                    self.root.after(100, self.entry.focus_set)
+        else:
+            try:
+                with open("boggle_config.txt", "w", encoding="utf-8") as f:
+                    f.write(self.root.geometry())
+            except: pass
+            self.root.destroy()
 
     def load_dictionary(self):
         dict_path = "mots_boggle.txt"
@@ -98,8 +132,12 @@ class BoggleApp:
         
         self.main_frame = tk.Frame(self.game_tab, padx=20, pady=10, bg="white")
         self.main_frame.pack(expand=True, fill="both")
+
+        # Container for everything that should be hidden during pause
+        self.board_container = tk.Frame(self.main_frame, bg="white")
+        self.board_container.pack(expand=True, fill="both")
         
-        self.grid_frame = tk.Frame(self.main_frame, bg="white")
+        self.grid_frame = tk.Frame(self.board_container, bg="white")
         self.grid_frame.pack(pady=5)
         self.cell_canvases = []
         for r in range(4):
@@ -112,7 +150,7 @@ class BoggleApp:
                 row_canvases.append((canvas, tid))
             self.cell_canvases.append(row_canvases)
             
-        self.input_line = tk.Frame(self.main_frame, bg="white")
+        self.input_line = tk.Frame(self.board_container, bg="white")
         self.input_line.pack(pady=10, fill="x")
         self.entry_var = tk.StringVar()
         self.entry = tk.Entry(self.input_line, textvariable=self.entry_var, font=self.entry_font, justify="center", relief="flat", highlightthickness=2, highlightbackground="#ddd", highlightcolor="#999")
@@ -120,9 +158,9 @@ class BoggleApp:
         self.time_label = tk.Label(self.input_line, text="3:00", font=self.timer_font, bg="white", width=5, fg="black")
         self.time_label.pack(side="right", padx=10)
         
-        self.words_label = tk.Label(self.main_frame, text="Mots trouvés", font=self.bold_font, bg="white")
+        self.words_label = tk.Label(self.board_container, text="Mots trouvés", font=self.bold_font, bg="white")
         self.words_label.pack(anchor="w")
-        self.words_container = tk.Frame(self.main_frame, bg="white", highlightthickness=1, highlightbackground="#eee")
+        self.words_container = tk.Frame(self.board_container, bg="white", highlightthickness=1, highlightbackground="#eee")
         self.words_container.pack(pady=5, fill="both", expand=True)
         self.words_scroll = tk.Scrollbar(self.words_container)
         self.words_scroll.pack(side="right", fill="y")
@@ -135,8 +173,14 @@ class BoggleApp:
         self.words_display.tag_config("not_in_dict", foreground="#9C27B0")
         self.words_display.tag_config("missed", foreground="blue")
         
-        self.bottom_frame = tk.Frame(self.main_frame, bg="white")
+        self.bottom_frame = tk.Frame(self.board_container, bg="white")
         self.bottom_frame.pack(fill="x", pady=5)
+
+        # Pause Overlay (initially hidden)
+        self.pause_frame = tk.Frame(self.main_frame, bg="white")
+        self.pause_label = tk.Label(self.pause_frame, text="PAUSE", font=("Arial", 36, "bold"), bg="white", fg="red")
+        self.pause_label.pack(expand=True, pady=50)
+        tk.Label(self.pause_frame, text="Appuyez sur ESPACE pour reprendre", font=self.main_font, bg="white").pack()
         self.stats_display = tk.Text(self.bottom_frame, height=4, font=("Arial", 11), bg="white", relief="flat", highlightthickness=0)
         self.stats_display.pack(fill="x", pady=5)
         self.stats_display.tag_config("header", font=("Arial", 11, "bold"))
@@ -172,9 +216,51 @@ class BoggleApp:
         self.root.bind("<Control-R>", lambda e: self.on_reset_request())
         self.root.bind("<Control-t>", lambda e: self.terminate_game())
         self.root.bind("<Control-T>", lambda e: self.terminate_game())
+        self.root.bind("<space>", self.toggle_pause)
         self.entry.bind("<Return>", self.validate_word)
         self.entry.bind("<KeyPress>", self.on_key_press)
-        self.root.bind("<FocusIn>", lambda e: self.entry.focus_set())
+        
+        # Focus events for auto-pause/resume
+        self.root.bind("<FocusOut>", self.on_focus_out)
+        self.root.bind("<FocusIn>", self.on_focus_in)
+
+    def on_focus_out(self, event):
+        # Only auto-pause if the event is for the main window
+        if event.widget == self.root and self.game_in_progress and not self.is_paused:
+            self.toggle_pause(force_state=True, due_to_focus=True)
+
+    def on_focus_in(self, event):
+        if event.widget == self.root:
+            self.entry.focus_set()
+            if self.game_in_progress and self.is_paused and self.paused_due_to_focus:
+                self.toggle_pause(force_state=False)
+
+    def toggle_pause(self, event=None, force_state=None, due_to_focus=False):
+        if not self.game_in_progress: return
+        
+        new_state = not self.is_paused if force_state is None else force_state
+        if new_state == self.is_paused: return # Already in desired state
+
+        self.is_paused = new_state
+        if self.is_paused:
+            if self.debug_mode: print(f"[DEBUG] Pausing game. Due to focus: {due_to_focus}")
+            self.has_paused_this_game = True
+            self.paused_due_to_focus = due_to_focus
+            self.last_pause_start = time.time()
+            if self.timer_id: self.root.after_cancel(self.timer_id); self.timer_id = None
+            self.board_container.pack_forget()
+            self.pause_frame.pack(expand=True, fill="both")
+        else:
+            if self.debug_mode: print("[DEBUG] Resuming game")
+            self.paused_due_to_focus = False
+            if self.last_pause_start:
+                self.total_pause_duration += (time.time() - self.last_pause_start)
+                self.last_pause_start = None
+            self.pause_frame.pack_forget()
+            self.board_container.pack(expand=True, fill="both")
+            # Force focus back to entry so keyboard events work
+            self.root.after(10, self.entry.focus_set)
+            self.update_timer()
 
     def on_key_press(self, event):
         if event.state & 4: return
@@ -329,11 +415,14 @@ class BoggleApp:
             self.time_left -= 1; mins, secs = divmod(self.time_left, 60)
             self.time_label.config(text=f"{mins}:{secs:02d}")
             self.timer_id = self.root.after(1000, self.update_timer)
-        else: self.end_game()
+        else: self.end_game(interrupted=False)
 
-    def end_game(self): self.game_in_progress = False; self.calculate_final_results()
+    def end_game(self, interrupted=True, silent=False): 
+        if self.debug_mode: print(f"[DEBUG] Ending game. Interrupted: {interrupted}, Silent: {silent}")
+        self.game_in_progress = False; 
+        self.calculate_final_results(interrupted=interrupted, silent=silent)
 
-    def calculate_final_results(self):
+    def calculate_final_results(self, interrupted=False, silent=False):
         self.final_base_score = 0
         for w in self.found_words:
             if (w in self.dictionary) and self.is_word_in_grid(w): self.final_base_score += self.get_word_score(w)
@@ -342,9 +431,26 @@ class BoggleApp:
             self.missed_words = sorted([w for w in self.all_valid_words if w not in self.found_words], key=lambda x: (-len(x), x))
             self.missed_words_computed = True; self.update_stats_table()
         self.refresh_words_display(); self.score_label.config(text=f"Score final : {self.final_base_score}")
-        self.process_stats()
+        self.process_stats(interrupted=interrupted, silent=silent)
 
-    def process_stats(self):
+    def process_stats(self, interrupted=False, silent=False):
+        # Calculate playing time
+        actual_playing_time = 0
+        if self.start_time:
+            now = time.time()
+            total_duration = now - self.start_time
+            # If paused right now, don't count the current pause in playing time
+            effective_pause = self.total_pause_duration
+            if self.is_paused and self.last_pause_start:
+                effective_pause += (now - self.last_pause_start)
+            actual_playing_time = int(total_duration - effective_pause)
+            # Cap it at TOTAL_GAME_TIME just in case of slight timing drift
+            if not interrupted: actual_playing_time = self.TOTAL_GAME_TIME
+            else: actual_playing_time = min(actual_playing_time, self.TOTAL_GAME_TIME)
+
+        if self.debug_mode:
+            print(f"[DEBUG] Saving game. Score: {self.final_base_score}, Time: {actual_playing_time}s, Finished: {not interrupted}")
+
         # Prepare data for history
         total_possible_score = sum(self.get_word_score(w) for w in self.all_valid_words)
         
@@ -372,11 +478,16 @@ class BoggleApp:
             'found_lengths': found_lens,
             'possible_lengths': poss_lens,
             'grid_string': "".join("".join(row) for row in self.current_grid),
-            'found_words': found_valid
+            'found_words': found_valid,
+            'has_paused': self.has_paused_this_game,
+            'playing_time': actual_playing_time,
+            'is_finished': 1 if not interrupted else 0
         }
         
         game_id = boggle_history.save_game(data)
         
+        if silent: return
+
         # Update Stats Tab
         for widget in self.stats_tab.winfo_children(): widget.destroy()
         self.stats_view = boggle_visualizer.show_stats(self.stats_tab, game_id, is_embedded=True)
@@ -395,7 +506,10 @@ class BoggleApp:
         tk.Button(btns, text="Non (Echap)", command=self.cancel_reset, bg="#f0f0f0", relief="flat", font=self.main_font, width=15).pack(side="left", padx=15)
         self.confirm_win.bind("<Control-r>", lambda e: self.confirm_reset()); self.confirm_win.bind("<Control-R>", lambda e: self.confirm_reset()); self.confirm_win.bind("<Escape>", lambda e: self.cancel_reset()); self.confirm_win.focus_force()
 
-    def confirm_reset(self): self.confirm_win.destroy(); self.generate_new_game()
+    def confirm_reset(self): 
+        if self.game_in_progress:
+            self.end_game(interrupted=True)
+        self.confirm_win.destroy(); self.generate_new_game()
     def cancel_reset(self): self.confirm_win.destroy()
 
     def generate_new_game(self):
@@ -407,7 +521,9 @@ class BoggleApp:
             for c in range(4):
                 canv, tid = self.cell_canvases[r][c]
                 canv.itemconfig(tid, text=self.current_grid[r][c], angle=random.choice([0, 90, 180, 270]))
-        self.game_in_progress = True; self.time_left = 180; self.found_words = []; self.extra_words = []
+        self.game_in_progress = True; self.is_paused = False; self.paused_due_to_focus = False; self.has_paused_this_game = False; 
+        self.time_left = self.TOTAL_GAME_TIME; self.found_words = []; self.extra_words = []
+        self.start_time = time.time(); self.total_pause_duration = 0; self.last_pause_start = None
         self.missed_words = []; self.missed_words_computed = False; self.final_base_score = 0; self.extra_score = 0
         self.entry_var.set(""); self.entry.config(state="normal"); self.entry.focus_set()
         self.stats_display.config(state="normal"); self.stats_display.delete("1.0", tk.END); self.stats_display.config(state="disabled")
@@ -420,4 +536,12 @@ class BoggleApp:
 
 if __name__ == "__main__":
     is_debug = "--debug" in sys.argv
-    root = tk.Tk(); app = BoggleApp(root, debug=is_debug); root.mainloop()
+    if is_debug:
+        print("[DEBUG] Running in debug mode")
+    
+    boggle_history.set_db_name(debug=is_debug)
+    boggle_history.init_db()
+
+    root = tk.Tk()
+    app = BoggleApp(root, debug=is_debug)
+    root.mainloop()
