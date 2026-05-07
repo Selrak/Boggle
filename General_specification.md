@@ -25,7 +25,10 @@ The system analyzes performance relative to the "Grid Potential" (all possible w
 - **Anti-Cheat Pause:** Spacebar or losing window focus hides the board and stops the timer.
 - **Unfinished Games:** Games interrupted by closing or resetting are saved as "unfinished" to preserve raw data for time-based ratio analysis.
 - **Database:** SQLite (`boggle_stats.db`) stores every game session. Integrity is critical.
-- **Update Checker:** On startup, the app checks the GitHub repository for a newer revision on the `master` branch. If found, it prompts the user to perform a `git pull` and auto-restart.
+- **Update Checker:** On startup, the app checks the GitHub repository for a newer revision on the `master` branch. To optimize performance, this check occurs **once every 24 hours**. If an update is found, it prompts the user to perform a `git pull` and auto-restart.
+- **Startup Flags:**
+    - `--debug`: Redirects data to `boggle_stats_debug.db` and enables verbose logging.
+    - `--force-update`: Bypasses the 24-hour limit to force an immediate update check.
 
 ## Technical Architecture
 - **Logic & UI:** `boggle_game.py` (Tkinter)
