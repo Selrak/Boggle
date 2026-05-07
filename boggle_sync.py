@@ -57,6 +57,7 @@ def pull_from_gist(debug=False):
         if debug: print(f"[DEBUG] Gist Sync: Pull error: {e}")
 
 def push_to_gist(debug=False):
+    """Additive sync: Fetches cloud data, merges with local data, and pushes the union."""
     config = get_config()
     if not config or not config.get("pat") or not config.get("gist_id"):
         return
@@ -65,25 +66,51 @@ def push_to_gist(debug=False):
     pat = config["pat"]
     url = f"https://api.github.com/gists/{gist_id}"
     headers = {"Authorization": f"token {pat}"}
-    
     filename = "boggle_history_debug.json" if debug else "boggle_history.json"
 
     try:
-        # Fetch all local games
+        # 1. Fetch current cloud state to avoid overwriting games played on other machines
+        cloud_games = []
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            gist_data = response.json()
+            sync_file = gist_data.get("files", {}).get(filename)
+            if sync_file and sync_file.get("content"):
+                try:
+                    cloud_games = json.loads(sync_file["content"]).get("games", [])
+                except:
+                    if debug: print("[DEBUG] Gist Sync: Cloud file corrupted, starting fresh.")
+        elif response.status_code != 404:
+            # If it's not a "not found" error, something is wrong. Abort to be safe.
+            if debug: print(f"[DEBUG] Gist Sync: Aborting push due to fetch error ({response.status_code})")
+            return
+
+        # 2. Fetch all local games
         local_games = boggle_history.get_history(only_finished=False)
         
-        # Prepare Gist content
+        # 3. Perform Union Merge based on GUID
+        # We build a dictionary keyed by GUID to ensure uniqueness
+        master_registry = {g["guid"]: g for g in cloud_games if "guid" in g}
+        
+        # Add/Overwrite with local games (local is the source of truth for its own data)
+        for g in local_games:
+            if "guid" in g:
+                master_registry[g["guid"]] = g
+                
+        merged_list = sorted(master_registry.values(), key=lambda x: x.get("timestamp", ""))
+
+        # 4. Prepare and Push Gist content
         payload = {
             "files": {
                 filename: {
-                    "content": json.dumps({"games": local_games}, indent=2)
+                    "content": json.dumps({"games": merged_list}, indent=2)
                 }
             }
         }
         
         response = requests.patch(url, headers=headers, json=payload, timeout=10)
         if response.status_code == 200:
-            if debug: print(f"[DEBUG] Gist Sync: Local history pushed to cloud successfully ({filename}).")
+            if debug: print(f"[DEBUG] Gist Sync: Non-destructive sync successful ({filename}). Total games: {len(merged_list)}")
         else:
             if debug: print(f"[DEBUG] Gist Sync: Push failed with status {response.status_code}")
     except Exception as e:
