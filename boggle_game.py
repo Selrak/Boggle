@@ -66,9 +66,13 @@ class BoggleApp:
         self.setup_ui()
         self.setup_bindings()
         self.generate_new_game()
+        self.update_status_label = tk.Label(self.main_frame, text="", font=("Arial", 9), bg="white", fg="#999")
+        self.update_status_label.pack(side="bottom", pady=2)
         self.root.after(1000, self.check_for_updates)
         
     def check_for_updates(self):
+        self.update_status_label.config(text="Recherche de mises à jour...")
+        self.root.update_idletasks()
         if self.debug_mode: print("[DEBUG] Checking for updates...")
         try:
             # Fetch remote without affecting local branch
@@ -80,11 +84,14 @@ class BoggleApp:
             
             if local_hash != remote_hash:
                 if self.debug_mode: print(f"[DEBUG] Update found! Local: {local_hash[:7]}, Remote: {remote_hash[:7]}")
+                self.update_status_label.config(text="Mise à jour disponible !")
                 self.show_update_dialog()
             else:
                 if self.debug_mode: print("[DEBUG] Game is up to date.")
+                self.update_status_label.pack_forget() # Hide if up to date
         except Exception as e:
             if self.debug_mode: print(f"[DEBUG] Update check failed: {e}")
+            self.update_status_label.pack_forget()
 
     def show_update_dialog(self):
         msg = "Une nouvelle version du jeu est disponible sur GitHub.\n\nVoulez-vous mettre à jour (git pull) et redémarrer ?"
