@@ -18,7 +18,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS games (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            timestamp DATETIME DEFAULT (datetime('now', 'localtime')),
             score INTEGER,
             max_score INTEGER,
             words_count INTEGER,
@@ -63,19 +63,20 @@ def init_db():
 def save_game(data):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    # Generate guid if not provided (e.g. from local game)
+    # Generate guid and timestamp in Python for consistency and local time support
     g_guid = data.get('guid') or str(uuid.uuid4())
+    g_time = data.get('timestamp') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     cursor.execute('''
         INSERT OR IGNORE INTO games (
-            score, max_score, words_count, max_words_count,
+            timestamp, score, max_score, words_count, max_words_count,
             longest_word_found_len, longest_word_possible_len,
             found_lengths_json, possible_lengths_json,
             grid_string, found_words_json, has_paused,
             playing_time, is_finished, guid
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
-        data['score'], data['max_score'], data['words_count'], data['max_words_count'],      
+        g_time, data['score'], data['max_score'], data['words_count'], data['max_words_count'],      
         data['longest_word_found_len'], data['longest_word_possible_len'],
         json.dumps(data['found_lengths']), json.dumps(data['possible_lengths']),
         data['grid_string'], json.dumps(data['found_words']),
