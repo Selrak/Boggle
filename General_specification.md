@@ -40,3 +40,10 @@ The system analyzes performance relative to the "Grid Potential" (all possible w
 - **Data Layer:** `boggle_history.py` (SQLite)
 - **Visualization:** `boggle_visualizer.py` (Matplotlib/Plotly)
 - **Simulation/Analysis:** `boggle_stats.py` (Simulation for distribution fitting)
+
+## Platform Compatibility
+- **Windows:** Launch via `PlayBoggle.bat` or the Start Menu shortcut.
+- **macOS:** 
+    - **First-time Setup:** Run `bash setup_mac.sh` in the terminal to create a virtual environment and install dependencies.
+    - **Launch:** Double-click `PlayBoggle.command`.
+    - **Note:** Key bindings support both **Control** (Windows) and **Command** (macOS) keys. Fonts are standardized to **Arial** for consistent rendering.

@@ -59,10 +59,10 @@ class StatsWindow:
         header_frame.pack(fill="x", padx=10, pady=5)
         
         main_text = f"Partie terminée ! Classement : {rank_data['overall_rank']} / {rank_data['total_games']}"
-        tk.Label(header_frame, text=main_text, font=("Segoe UI", 12, "bold"), bg="#fcfcfc", fg="#333").pack()
+        tk.Label(header_frame, text=main_text, font=("Arial", 12, "bold"), bg="#fcfcfc", fg="#333").pack()
         
         sub_text = f"Grille {rank_data['richness']} : vous êtes classé {rank_data['richness_rank']} dans cette catégorie."
-        tk.Label(header_frame, text=sub_text, font=("Segoe UI", 10), bg="#fcfcfc", fg="#666").pack()
+        tk.Label(header_frame, text=sub_text, font=("Arial", 10), bg="#fcfcfc", fg="#666").pack()
 
     def setup_tabs(self):
         self.notebook = ttk.Notebook(self.window)
@@ -107,9 +107,9 @@ class StatsWindow:
             ma_score = np.convolve(score_pct, np.ones(5)/5, mode='valid')
             ax.plot(range(5, len(score_pct)+1), ma_score, color='#0078d7', lw=2, linestyle='--')
             
-        ax.set_title("Progression (%)", fontname="Segoe UI")
-        ax.set_xlabel("Partie #", fontname="Segoe UI")
-        ax.set_ylabel("Pourcentage (%)", fontname="Segoe UI")
+        ax.set_title("Progression (%)", fontname="Arial")
+        ax.set_xlabel("Partie #", fontname="Arial")
+        ax.set_ylabel("Pourcentage (%)", fontname="Arial")
         ax.legend()
         ax.grid(True, alpha=0.2)
         
@@ -131,9 +131,9 @@ class StatsWindow:
             ma_tier = np.convolve(top_tier_rates, np.ones(5)/5, mode='valid')
             ax.plot(range(5, len(top_tier_rates)+1), ma_tier, color='#7b1fa2', lw=2, linestyle='--')
 
-        ax.set_title("Efficacité sur les mots longs", fontname="Segoe UI")
-        ax.set_ylabel("% Mots [Max-2, Max] trouvés", fontname="Segoe UI")
-        ax.set_xlabel("Partie #", fontname="Segoe UI")
+        ax.set_title("Efficacité sur les mots longs", fontname="Arial")
+        ax.set_ylabel("% Mots [Max-2, Max] trouvés", fontname="Arial")
+        ax.set_xlabel("Partie #", fontname="Arial")
         ax.grid(True, alpha=0.2)
         
         canvas = FigureCanvasTkAgg(fig, master=tab)
@@ -160,8 +160,8 @@ class StatsWindow:
             if data:
                 ax1.plot(range(1, len(data)+1), data, label=name, color=colors[name], marker='o', markersize=2, alpha=0.7)
         
-        ax1.set_title("Progression par type", fontname="Segoe UI")
-        ax1.set_ylabel("% Score", fontname="Segoe UI")
+        ax1.set_title("Progression par type", fontname="Arial")
+        ax1.set_ylabel("% Score", fontname="Arial")
         ax1.legend()
         ax1.grid(True, alpha=0.2)
         
@@ -169,8 +169,8 @@ class StatsWindow:
         valid_labels = [name for name, data in bins.items() if data]
         if valid_data:
             ax2.boxplot(valid_data, labels=valid_labels)
-            ax2.set_title("Niveau moyen par type", fontname="Segoe UI")
-            ax2.set_ylabel("% Score", fontname="Segoe UI")
+            ax2.set_title("Niveau moyen par type", fontname="Arial")
+            ax2.set_ylabel("% Score", fontname="Arial")
             ax2.grid(True, alpha=0.2)
 
         fig.tight_layout()
@@ -192,12 +192,12 @@ class StatsWindow:
         
         ax1.hist(all_scores, bins=15, color='#eee', edgecolor='#ccc', label='Historique')
         ax1.axvline(current_score, color='#d32f2f', linestyle='--', lw=2, label='Actuelle')
-        ax1.set_title("Tous les scores", fontname="Segoe UI")
+        ax1.set_title("Tous les scores", fontname="Arial")
         ax1.legend()
         
         ax2.hist(last_n, bins=10, color='#e3f2fd', edgecolor='#90caf9', label='20 dernières')
         ax2.axvline(current_score, color='#d32f2f', linestyle='--', lw=2, label='Actuelle')
-        ax2.set_title("Scores récents", fontname="Segoe UI")
+        ax2.set_title("Scores récents", fontname="Arial")
         ax2.legend()
         
         fig.tight_layout()
@@ -210,7 +210,7 @@ class StatsWindow:
         footer.pack(fill="x")
         
         btn = tk.Button(footer, text="Ouvrir Graphique 3D Interactif (Plotly)", command=self.open_plotly, 
-                        bg="#f5f5f5", fg="#0078d7", relief="flat", padx=20, pady=5, font=("Segoe UI", 9))
+                        bg="#f5f5f5", fg="#0078d7", relief="flat", padx=20, pady=5, font=("Arial", 9))
         btn.pack()
 
     def open_plotly(self):

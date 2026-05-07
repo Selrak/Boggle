@@ -76,6 +76,14 @@ class BoggleApp:
         boggle_sync.sync_pull_async(debug=self.debug_mode)
         
     def check_for_updates(self):
+        # Quick check if git is available to avoid system prompts on macOS
+        try:
+            subprocess.run(["git", "--version"], capture_output=True, check=True)
+        except:
+            if self.debug_mode: print("[DEBUG] Git not found. Skipping update check.")
+            self.update_status_label.pack_forget()
+            return
+
         config_path = "boggle_config.json"
         now = time.time()
         should_check = self.force_update
@@ -289,10 +297,15 @@ class BoggleApp:
             self.scroll_anim_id = self.root.after(20, lambda: self.animate_scroll_to_end(target))
 
     def setup_bindings(self):
-        self.root.bind("<Control-r>", lambda e: self.on_reset_request())
-        self.root.bind("<Control-R>", lambda e: self.on_reset_request())
-        self.root.bind("<Control-t>", lambda e: self.terminate_game())
-        self.root.bind("<Control-T>", lambda e: self.terminate_game())
+        # Universal bindings (Control for Windows/Linux, Command for macOS)
+        for key in ["r", "R"]:
+            self.root.bind(f"<Control-{key}>", lambda e: self.on_reset_request())
+            self.root.bind(f"<Command-{key}>", lambda e: self.on_reset_request())
+        
+        for key in ["t", "T"]:
+            self.root.bind(f"<Control-{key}>", lambda e: self.on_reset_request())
+            self.root.bind(f"<Command-{key}>", lambda e: self.terminate_game())
+            
         self.root.bind("<space>", self.toggle_pause)
         self.entry.bind("<Return>", self.validate_word)
         self.entry.bind("<KeyPress>", self.on_key_press)
