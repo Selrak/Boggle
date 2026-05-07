@@ -98,12 +98,12 @@ class BoggleApp:
         if messagebox.askyesno("Mise à jour disponible", msg, parent=self.root):
             try:
                 subprocess.run(["git", "pull"], check=True)
-                messagebox.showinfo("Mise à jour", "Mise à jour réussie. Le jeu va redémarrer.")
+                messagebox.showinfo("Mise à jour", "Mise à jour réussie. Le jeu va redémarrer.", parent=self.root)
                 # Restart the application
                 python = sys.executable
                 os.execl(python, python, *sys.argv)
             except Exception as e:
-                messagebox.showerror("Erreur", f"Échec de la mise à jour : {e}")
+                messagebox.showerror("Erreur", f"Échec de la mise à jour : {e}", parent=self.root)
 
     def load_geometry(self):
         config_path = "boggle_config.txt"
