@@ -1,4 +1,7 @@
 __pycache__/
 screenshots/
 boggle_config.txt
+boggle_config.json
+sync_config.json
+boggle_stats_debug.db
 *.pyc

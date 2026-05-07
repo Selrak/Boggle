@@ -8,6 +8,7 @@ import json
 
 import boggle_history
 import boggle_visualizer
+import boggle_sync
 import subprocess
 
 def remove_accents(input_str):
@@ -70,6 +71,9 @@ class BoggleApp:
         self.update_status_label = tk.Label(self.main_frame, text="", font=("Arial", 9), bg="white", fg="#999")
         self.update_status_label.pack(side="bottom", pady=2)
         self.root.after(1000, self.check_for_updates)
+        
+        # Start background sync
+        boggle_sync.sync_pull_async(debug=self.debug_mode)
         
     def check_for_updates(self):
         config_path = "boggle_config.json"
@@ -558,6 +562,9 @@ class BoggleApp:
         }
         
         game_id = boggle_history.save_game(data)
+        
+        # Sync with cloud
+        boggle_sync.sync_push_async(debug=self.debug_mode)
         
         if silent: return
 
