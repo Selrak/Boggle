@@ -8,6 +8,7 @@ import json
 
 import boggle_history
 import boggle_visualizer
+import subprocess
 
 def remove_accents(input_str):
     nksfd = unicodedata.normalize('NFKD', input_str)
@@ -65,7 +66,38 @@ class BoggleApp:
         self.setup_ui()
         self.setup_bindings()
         self.generate_new_game()
+        self.root.after(1000, self.check_for_updates)
         
+    def check_for_updates(self):
+        if self.debug_mode: print("[DEBUG] Checking for updates...")
+        try:
+            # Fetch remote without affecting local branch
+            subprocess.run(["git", "fetch"], capture_output=True, check=True, timeout=5)
+            
+            # Compare local HEAD with origin/master
+            local_hash = subprocess.check_output(["git", "rev-parse", "@"], encoding='utf-8').strip()
+            remote_hash = subprocess.check_output(["git", "rev-parse", "@{u}"], encoding='utf-8').strip()
+            
+            if local_hash != remote_hash:
+                if self.debug_mode: print(f"[DEBUG] Update found! Local: {local_hash[:7]}, Remote: {remote_hash[:7]}")
+                self.show_update_dialog()
+            else:
+                if self.debug_mode: print("[DEBUG] Game is up to date.")
+        except Exception as e:
+            if self.debug_mode: print(f"[DEBUG] Update check failed: {e}")
+
+    def show_update_dialog(self):
+        msg = "Une nouvelle version du jeu est disponible sur GitHub.\n\nVoulez-vous mettre à jour (git pull) et redémarrer ?"
+        if messagebox.askyesno("Mise à jour disponible", msg, parent=self.root):
+            try:
+                subprocess.run(["git", "pull"], check=True)
+                messagebox.showinfo("Mise à jour", "Mise à jour réussie. Le jeu va redémarrer.")
+                # Restart the application
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+            except Exception as e:
+                messagebox.showerror("Erreur", f"Échec de la mise à jour : {e}")
+
     def load_geometry(self):
         config_path = "boggle_config.txt"
         if os.path.exists(config_path):
