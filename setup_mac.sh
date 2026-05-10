@@ -33,5 +33,8 @@ echo "Installing dependencies..."
 # 5. Make launcher executable
 chmod +x PlayBoggle.command
 
+# 6. Make the Finder-friendly app wrapper executable
+chmod +x PlayBoggle.app/Contents/MacOS/PlayBoggle
+
 echo "--- Setup Complete ---"
-echo "You can now start the game by double-clicking 'PlayBoggle.command'."
+echo "You can now start the game by double-clicking 'PlayBoggle.app'."

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$SCRIPT_DIR" || exit 1
+
+if ! command -v python3 >/dev/null 2>&1; then
+    osascript -e 'display alert "Boggle" message "Python 3 is not installed. Please install it from python.org." as critical'
+    exit 1
+fi
+
+if [ ! -x "./venv/bin/python3" ]; then
+    osascript -e 'display alert "Boggle" message "The Boggle environment is not set up yet. Run setup_mac.sh once from Terminal, then launch PlayBoggle.app again." as critical'
+    exit 1
+fi
+
+export MPLCONFIGDIR="${TMPDIR:-/tmp}/boggle-matplotlib"
+mkdir -p "$MPLCONFIGDIR"
+
+exec ./venv/bin/python3 boggle_game.py >> /tmp/PlayBoggleLauncher.log 2>&1

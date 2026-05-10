@@ -45,5 +45,6 @@ The system analyzes performance relative to the "Grid Potential" (all possible w
 - **Windows:** Launch via `PlayBoggle.bat` or the Start Menu shortcut.
 - **macOS:** 
     - **First-time Setup:** Run `bash setup_mac.sh` in the terminal to create a virtual environment and install dependencies.
-    - **Launch:** Double-click `PlayBoggle.command`.
+    - **Launch:** Double-click `PlayBoggle.app` for normal use. `PlayBoggle.command` remains available as a terminal-based fallback launcher.
     - **Note:** Key bindings support both **Control** (Windows) and **Command** (macOS) keys. Fonts are standardized to **Arial** for consistent rendering.
+    - **Focus/Pause Behavior:** Auto-pause is based on app-level focus loss, not internal focus changes between Tk widgets, so startup and normal typing do not incorrectly hide the board.

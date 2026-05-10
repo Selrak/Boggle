@@ -49,6 +49,8 @@ class BoggleApp:
         self.last_pause_start = None
         self.timer_id = None
         self.scroll_anim_id = None
+        self.pending_focus_out_id = None
+        self.focus_pause_grace_until = 0
         
         self.current_grid = []
         self.dictionary = set()
@@ -306,7 +308,7 @@ class BoggleApp:
             self.root.bind(f"<Control-{key}>", lambda e: self.on_reset_request())
             self.root.bind(f"<Command-{key}>", lambda e: self.terminate_game())
             
-        self.root.bind("<space>", self.toggle_pause)
+        self.root.bind_all("<space>", self.on_space_pressed)
         self.entry.bind("<Return>", self.validate_word)
         self.entry.bind("<KeyPress>", self.on_key_press)
         
@@ -314,16 +316,37 @@ class BoggleApp:
         self.root.bind("<FocusOut>", self.on_focus_out)
         self.root.bind("<FocusIn>", self.on_focus_in)
 
+    def _widget_belongs_to_root(self, widget):
+        if widget is None:
+            return False
+        try:
+            return widget.winfo_toplevel() == self.root
+        except Exception:
+            return False
+
     def on_focus_out(self, event):
-        # Only auto-pause if the event is for the main window
-        if event.widget == self.root and self.game_in_progress and not self.is_paused:
-            self.toggle_pause(force_state=True, due_to_focus=True)
+        if self.pending_focus_out_id:
+            self.root.after_cancel(self.pending_focus_out_id)
+            self.pending_focus_out_id = None
+        if self.game_in_progress and not self.is_paused:
+            self.pending_focus_out_id = self.root.after(50, self._handle_focus_out_check)
 
     def on_focus_in(self, event):
-        if event.widget == self.root:
+        if self.pending_focus_out_id:
+            self.root.after_cancel(self.pending_focus_out_id)
+            self.pending_focus_out_id = None
+        if self._widget_belongs_to_root(event.widget):
             self.entry.focus_set()
             if self.game_in_progress and self.is_paused and self.paused_due_to_focus:
                 self.toggle_pause(force_state=False)
+
+    def _handle_focus_out_check(self):
+        self.pending_focus_out_id = None
+        focus_widget = self.root.focus_get()
+        if time.time() < self.focus_pause_grace_until:
+            return
+        if self.game_in_progress and not self.is_paused and not self._widget_belongs_to_root(focus_widget):
+            self.toggle_pause(force_state=True, due_to_focus=True)
 
     def toggle_pause(self, event=None, force_state=None, due_to_focus=False):
         if not self.game_in_progress: return
@@ -340,6 +363,7 @@ class BoggleApp:
             if self.timer_id: self.root.after_cancel(self.timer_id); self.timer_id = None
             self.board_container.pack_forget()
             self.pause_frame.pack(expand=True, fill="both")
+            self.root.after(10, self.pause_frame.focus_set)
         else:
             if self.debug_mode: print("[DEBUG] Resuming game")
             self.paused_due_to_focus = False
@@ -351,6 +375,13 @@ class BoggleApp:
             # Force focus back to entry so keyboard events work
             self.root.after(10, self.entry.focus_set)
             self.update_timer()
+
+    def on_space_pressed(self, event=None):
+        focus_widget = self.root.focus_get()
+        if not self.game_in_progress or not self._widget_belongs_to_root(focus_widget):
+            return
+        self.toggle_pause(event=event)
+        return "break"
 
     def on_key_press(self, event):
         if event.state & 4: return
@@ -617,6 +648,7 @@ class BoggleApp:
         self.game_in_progress = True; self.is_paused = False; self.paused_due_to_focus = False; self.has_paused_this_game = False; 
         self.time_left = self.TOTAL_GAME_TIME; self.found_words = []; self.extra_words = []
         self.start_time = time.time(); self.total_pause_duration = 0; self.last_pause_start = None
+        self.focus_pause_grace_until = time.time() + 0.75
         self.missed_words = []; self.missed_words_computed = False; self.final_base_score = 0; self.extra_score = 0
         self.entry_var.set(""); self.entry.config(state="normal"); self.entry.focus_set()
         self.stats_display.config(state="normal"); self.stats_display.delete("1.0", tk.END); self.stats_display.config(state="disabled")
