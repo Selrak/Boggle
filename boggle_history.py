@@ -67,6 +67,18 @@ def save_game(data):
     g_guid = data.get('guid') or str(uuid.uuid4())
     g_time = data.get('timestamp') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+    # Normalisation des données (gestion du format Gist vs format Game interne)
+    def get_val(key, is_json=False):
+        # Chercher avec ou sans suffixe _json
+        val = data.get(key)
+        if val is None:
+            val = data.get(f"{key}_json")
+        
+        if is_json:
+            if isinstance(val, str): return val # Déjà encodé
+            return json.dumps(val if val is not None else {})
+        return val
+
     cursor.execute('''
         INSERT OR IGNORE INTO games (
             timestamp, score, max_score, words_count, max_words_count,
@@ -76,10 +88,12 @@ def save_game(data):
             playing_time, is_finished, guid
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
-        g_time, data['score'], data['max_score'], data['words_count'], data['max_words_count'],      
-        data['longest_word_found_len'], data['longest_word_possible_len'],
-        json.dumps(data['found_lengths']), json.dumps(data['possible_lengths']),
-        data['grid_string'], json.dumps(data['found_words']),
+        g_time, 
+        data.get('score'), data.get('max_score'), 
+        data.get('words_count'), data.get('max_words_count'),      
+        data.get('longest_word_found_len'), data.get('longest_word_possible_len'),
+        get_val('found_lengths', True), get_val('possible_lengths', True),
+        data.get('grid_string'), get_val('found_words', True),
         1 if data.get('has_paused') else 0,
         data.get('playing_time', 180),
         1 if data.get('is_finished') else 0,
