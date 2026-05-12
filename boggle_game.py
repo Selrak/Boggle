@@ -201,10 +201,11 @@ class BoggleAppQt(QMainWindow):
     ]
     TOTAL_GAME_TIME = 180
 
-    def __init__(self, debug=False, force_update=False):
+    def __init__(self, debug=False, force_update=False, simulate_update=False):
         super().__init__()
         self.debug_mode = debug
         self.force_update = force_update
+        self.simulate_update = simulate_update
         
         self.current_grid = []
         self.dictionary = set()
@@ -219,6 +220,7 @@ class BoggleAppQt(QMainWindow):
         
         self.game_in_progress = False
         self.is_paused = False
+        self.has_paused_this_game = False
         self.time_left = self.TOTAL_GAME_TIME
         self.start_time = None
         self.total_pause_duration = 0
@@ -343,6 +345,12 @@ class BoggleAppQt(QMainWindow):
         except: pass
 
         try:
+            if self.simulate_update:
+                if self.debug_mode: print("[DEBUG] Simulating update available!")
+                self.update_status_label.setText("Mise à jour disponible (Simulation) !")
+                self.show_update_dialog()
+                return
+
             # Fetch remote without affecting local branch
             subprocess.run(["git", "fetch"], capture_output=True, check=True, timeout=5)
             
@@ -896,7 +904,8 @@ class BoggleAppQt(QMainWindow):
 
 if __name__ == "__main__":
     is_debug = "--debug" in sys.argv
-    force_update = "--force-update" in sys.argv
+    force_update = "--force-update" in sys.argv or "--force-check-update" in sys.argv
+    simulate_update = "--simulate-update" in sys.argv and force_update
     
     app = QApplication(sys.argv)
     
@@ -904,6 +913,6 @@ if __name__ == "__main__":
     font = QFont("Arial", 11)
     app.setFont(font)
     
-    window = BoggleAppQt(debug=is_debug, force_update=force_update)
+    window = BoggleAppQt(debug=is_debug, force_update=force_update, simulate_update=simulate_update)
     window.show()
     sys.exit(app.exec())
