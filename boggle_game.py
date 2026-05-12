@@ -14,6 +14,7 @@ from PySide6.QtGui import QFont, QPalette, QColor, QPainter, QPen, QBrush
 import boggle_history
 import boggle_sync
 import boggle_visualizer
+import subprocess
 
 def remove_accents(input_str):
     nksfd = unicodedata.normalize('NFKD', input_str)
@@ -287,9 +288,91 @@ class BoggleAppQt(QMainWindow):
         QApplication.instance().installEventFilter(self)
         
         self.generate_new_game()
+        
+        # Lancer la vérification des mises à jour après 1 seconde
+        QTimer.singleShot(1000, self.check_for_updates)
 
         if self.debug_mode:
             print("[DEBUG] PySide6 App initialized")
+
+    def check_for_updates(self):
+        # Quick check if git is available to avoid system prompts on macOS
+        try:
+            subprocess.run(["git", "--version"], capture_output=True, check=True)
+        except:
+            if self.debug_mode: print("[DEBUG] Git not found. Skipping update check.")
+            self.update_status_label.hide()
+            return
+
+        config_path = "boggle_config.json"
+        now = time.time()
+        should_check = self.force_update
+        
+        if not should_check:
+            try:
+                if os.path.exists(config_path):
+                    with open(config_path, "r") as f:
+                        config = json.load(f)
+                        last_check = config.get("last_update_check", 0)
+                        # Check if 24 hours (86400 seconds) have passed
+                        if now - last_check > 86400:
+                            should_check = True
+                else:
+                    should_check = True
+            except:
+                should_check = True
+
+        if not should_check:
+            if self.debug_mode: print("[DEBUG] Skipping update check (checked recently).")
+            self.update_status_label.hide()
+            return
+
+        self.update_status_label.setText("Recherche de mises à jour...")
+        self.update_status_label.show()
+        QApplication.processEvents()
+        
+        if self.debug_mode: print("[DEBUG] Checking for updates...")
+        
+        # Save the time of this check
+        try:
+            config = {}
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f: config = json.load(f)
+            config["last_update_check"] = now
+            with open(config_path, "w") as f: json.dump(config, f)
+        except: pass
+
+        try:
+            # Fetch remote without affecting local branch
+            subprocess.run(["git", "fetch"], capture_output=True, check=True, timeout=5)
+            
+            # Compare local HEAD with origin/master
+            local_hash = subprocess.check_output(["git", "rev-parse", "@"], encoding='utf-8').strip()
+            remote_hash = subprocess.check_output(["git", "rev-parse", "@{u}"], encoding='utf-8').strip()
+            
+            if local_hash != remote_hash:
+                if self.debug_mode: print(f"[DEBUG] Update found! Local: {local_hash[:7]}, Remote: {remote_hash[:7]}")
+                self.update_status_label.setText("Mise à jour disponible !")
+                self.show_update_dialog()
+            else:
+                if self.debug_mode: print("[DEBUG] Game is up to date.")
+                self.update_status_label.hide()
+        except Exception as e:
+            if self.debug_mode: print(f"[DEBUG] Update check failed: {e}")
+            self.update_status_label.hide()
+
+    def show_update_dialog(self):
+        msg = "Une nouvelle version du jeu est disponible sur GitHub.\n\nVoulez-vous mettre à jour (git pull) et redémarrer ?"
+        confirm = QMessageBox.question(self, "Mise à jour disponible", msg, QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        if confirm == QMessageBox.Yes:
+            try:
+                subprocess.run(["git", "pull"], check=True)
+                QMessageBox.information(self, "Mise à jour", "Mise à jour réussie. Le jeu va redémarrer.")
+                # Restart the application
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+            except Exception as e:
+                QMessageBox.critical(self, "Erreur", f"Échec de la mise à jour : {e}")
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.ApplicationDeactivate:
@@ -366,6 +449,14 @@ class BoggleAppQt(QMainWindow):
         self.stats_view = boggle_visualizer.StatsWindowQt(game_id=None, debug=self.debug_mode)
         self.stats_layout.addWidget(self.stats_view)
         self.tabs.addTab(self.stats_tab, "Progression")
+
+        # Update status label
+        self.update_status_label = QLabel("")
+        self.update_status_label.setFont(QFont("Arial", 9))
+        self.update_status_label.setStyleSheet("color: #999;")
+        self.update_status_label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.update_status_label)
+        self.update_status_label.hide()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Space:
