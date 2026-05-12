@@ -184,19 +184,23 @@ class StatsWindow:
         
         all_scores = [g['score'] for g in self.history]
         last_n = all_scores[-20:]
-        current_score = next(g['score'] for g in self.history if g['id'] == self.current_id)
+        
+        # Safe lookup for current score (might be filtered out if unfinished)
+        current_score = next((g['score'] for g in self.history if g['id'] == self.current_id), None)
         
         fig = Figure(figsize=(8, 4), dpi=100)
         ax1 = fig.add_subplot(211)
         ax2 = fig.add_subplot(212)
         
         ax1.hist(all_scores, bins=15, color='#eee', edgecolor='#ccc', label='Historique')
-        ax1.axvline(current_score, color='#d32f2f', linestyle='--', lw=2, label='Actuelle')
+        if current_score is not None:
+            ax1.axvline(current_score, color='#d32f2f', linestyle='--', lw=2, label='Actuelle')
         ax1.set_title("Tous les scores", fontname="Arial")
         ax1.legend()
         
         ax2.hist(last_n, bins=10, color='#e3f2fd', edgecolor='#90caf9', label='20 dernières')
-        ax2.axvline(current_score, color='#d32f2f', linestyle='--', lw=2, label='Actuelle')
+        if current_score is not None:
+            ax2.axvline(current_score, color='#d32f2f', linestyle='--', lw=2, label='Actuelle')
         ax2.set_title("Scores récents", fontname="Arial")
         ax2.legend()
         
